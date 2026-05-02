@@ -1,6 +1,6 @@
 # Docker Netmap
 
-A tiny Python MVP that visualizes local Docker containers, networks, and published ports.
+A tiny Python MVP that visualizes local Docker containers, networks, and published ports on a map.
 
 ## What it does
 
