@@ -1,6 +1,6 @@
-# Docker Network Map
+# Docker Network Map MVP
 
-A tiny Python MVP that visualizes local Docker containers, networks, and published ports on a map.
+A tiny Python MVP that visualizes local Docker containers, networks, and published ports on a map. Instead of using Docker Desktop to see what containers are running, you can use this to see how the containers are connected
 
 ## What it does
 
@@ -11,7 +11,7 @@ A tiny Python MVP that visualizes local Docker containers, networks, and publish
   - container nodes
   - edges between containers and networks
 - Shows published ports like `localhost:8080 -> container:80`
-- Serves an interactive browser UI to view your docker containers
+- Serves an interactive browser UI to view your Docker containers
 
 
 <img width="1025" height="625" alt="dockermap1" src="https://github.com/user-attachments/assets/b1f2777a-0100-4d87-8401-7ae2e100b93a" />
@@ -25,7 +25,7 @@ A tiny Python MVP that visualizes local Docker containers, networks, and publish
 
 ## Install
 
-Fork the repo and run with simple docker commands
+Fork/Clone the repo and run with simple Docker commands
 
 ## Run with Docker
 
