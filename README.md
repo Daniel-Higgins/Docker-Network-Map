@@ -14,7 +14,9 @@ A tiny Python MVP that visualizes local Docker containers, networks, and publish
 - Serves an interactive browser UI
 
 
-<img width="2050" height="1255" alt="dockermap1" src="https://github.com/user-attachments/assets/b1f2777a-0100-4d87-8401-7ae2e100b93a" />
+<img width="1025" height="625" alt="dockermap1" src="https://github.com/user-attachments/assets/b1f2777a-0100-4d87-8401-7ae2e100b93a" />
+<img width="1021" height="605" alt="dockermap2" src="https://github.com/user-attachments/assets/f0ccc860-b04b-4e57-bf0a-d8a12e81e6b4" />
+<img width="1038" height="606" alt="dockermap3" src="https://github.com/user-attachments/assets/47a1c0d8-acae-441a-a795-bca1e3ac67de" />
 
 
 
