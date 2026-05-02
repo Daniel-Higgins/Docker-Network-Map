@@ -25,23 +25,7 @@ A tiny Python MVP that visualizes local Docker containers, networks, and publish
 
 ## Install
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-## Run locally
-
-```bash
-python -m docker_netmap
-```
-
-Open:
-
-```text
-http://localhost:8765
-```
+Fork the repo and run with simple docker commands
 
 ## Run with Docker
 
