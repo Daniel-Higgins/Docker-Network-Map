@@ -1,4 +1,4 @@
-# Docker Netmap
+# Docker Network Map
 
 A tiny Python MVP that visualizes local Docker containers, networks, and published ports on a map.
 
@@ -11,7 +11,7 @@ A tiny Python MVP that visualizes local Docker containers, networks, and publish
   - container nodes
   - edges between containers and networks
 - Shows published ports like `localhost:8080 -> container:80`
-- Serves an interactive browser UI
+- Serves an interactive browser UI to view your docker containers
 
 
 <img width="1025" height="625" alt="dockermap1" src="https://github.com/user-attachments/assets/b1f2777a-0100-4d87-8401-7ae2e100b93a" />
