@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Docker Netmap</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://unpkg.com/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --line: #374151;
+        --accent: #38bdf8;
+        --green: #22c55e;
+        --red: #ef4444;
+        --yellow: #eab308;
+        --orange: #f59e0b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        height: 100vh;
+        display: grid;
+        grid-template-columns: 1fr 360px;
+        overflow: hidden;
+      }
+
+      #cy {
+        width: 100%;
+        height: 100vh;
+        display: block;
+      }
+
+      aside {
+        border-left: 1px solid var(--line);
+        background: var(--panel);
+        padding: 18px;
+        overflow: auto;
+      }
+
+      h1 {
+        margin: 0 0 4px;
+        font-size: 22px;
+      }
+
+      .subtitle {
+        color: var(--muted);
+        margin-bottom: 18px;
+        font-size: 14px;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      .stat {
+        background: #020617;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+      }
+
+      .stat b {
+        display: block;
+        font-size: 20px;
+      }
+
+      .stat span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      button {
+        width: 100%;
+        border: 0;
+        border-radius: 12px;
+        background: var(--accent);
+        color: #001018;
+        padding: 10px 12px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-bottom: 10px;
+      }
+
+      .secondary {
+        background: #1f2937;
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+
+      .controls {
+        background: #020617;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+
+      .control {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 13px;
+        margin: 8px 0;
+      }
+
+      .control input {
+        accent-color: var(--accent);
+      }
+
+      .card {
+        background: #020617;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 12px;
+      }
+
+      .card h2 {
+        margin: 0 0 8px;
+        font-size: 16px;
+        white-space: pre-line;
+      }
+
+      .kv {
+        margin: 6px 0;
+        color: var(--muted);
+        font-size: 14px;
+        word-break: break-word;
+      }
+
+      .kv strong {
+        color: var(--text);
+      }
+
+      .pill {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: #1f2937;
+        margin: 3px 4px 6px 0;
+      }
+
+      .pill.orange {
+        background: rgba(245, 158, 11, 0.16);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.45);
+      }
+
+      .running {
+        color: var(--green);
+      }
+      .exited,
+      .dead {
+        color: var(--red);
+      }
+      .created,
+      .paused,
+      .restarting {
+        color: var(--yellow);
+      }
+
+      ul {
+        margin: 6px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .error {
+        color: var(--red);
+        line-height: 1.4;
+      }
+
+      .legend {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        margin-right: 6px;
+        vertical-align: -1px;
+      }
+
+      .diamond {
+        transform: rotate(45deg);
+        border-radius: 1px;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="cy"></main>
+
+    <aside>
+      <h1>Docker Netmap</h1>
+      <div class="subtitle">Local container/network map</div>
+
+      <div class="stats">
+        <div class="stat">
+          <b id="containerCount">-</b><span>containers</span>
+        </div>
+        <div class="stat"><b id="networkCount">-</b><span>networks</span></div>
+        <div class="stat"><b id="portCount">-</b><span>ports</span></div>
+        <div class="stat"><b id="bridgeCount">-</b><span>multi-net</span></div>
+      </div>
+
+      <button onclick="loadGraph()">Refresh map</button>
+      <button class="secondary" onclick="fitGraph()">Fit graph</button>
+
+      <div class="controls">
+        <label class="control">
+          <input
+            id="showDirectLinks"
+            type="checkbox"
+            checked
+            onchange="renderGraph()"
+          />
+          Show container-to-container links
+        </label>
+        <label class="control">
+          <input
+            id="showUnusedNetworks"
+            type="checkbox"
+            checked
+            onchange="renderGraph()"
+          />
+          Show unused networks
+        </label>
+        <label class="control">
+          <input
+            id="groupByNetwork"
+            type="checkbox"
+            checked
+            onchange="renderGraph()"
+          />
+          Group layout by network
+        </label>
+      </div>
+
+      <div class="card legend">
+        <div>
+          <span class="dot" style="background: #22c55e"></span>running container
+        </div>
+        <div>
+          <span class="dot" style="background: #ef4444"></span>stopped container
+        </div>
+        <div>
+          <span class="dot" style="background: #f59e0b"></span>multi-network
+          container
+        </div>
+        <div>
+          <span class="dot diamond" style="background: #38bdf8"></span>network
+        </div>
+        <div>solid line = container attached to network</div>
+        <div>dashed line = containers share a network</div>
+      </div>
+
+      <div id="details" class="card">
+        <h2>Click a node</h2>
+        <div class="kv">Container and network details will show here.</div>
+      </div>
+    </aside>
+
+    <script>
+      let cy;
+      let latestGraph = null;
+
+      function statusClass(status) {
+        return status ? status.toLowerCase() : "";
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function renderDetails(data) {
+        const details = document.getElementById("details");
+
+        if (!data) {
+          details.innerHTML = `<h2>Click a node</h2><div class="kv">Container and network details will show here.</div>`;
+          return;
+        }
+
+        if (data.type === "container") {
+          const ports =
+            data.ports && data.ports.length
+              ? `<ul>${data.ports.map((p) => `<li>${escapeHtml(p)}</li>`).join("")}</ul>`
+              : `<div class="kv">No published ports</div>`;
+          const volumes =
+            data.volumes && data.volumes.length
+              ? `<ul>${data.volumes.map((v) => `<li>${escapeHtml(v)}</li>`).join("")}</ul>`
+              : `<div class="kv">No mounted volumes</div>`;
+
+          const networks =
+            data.networks && data.networks.length
+              ? `<ul>${data.networks.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`
+              : `<div class="kv">No networks</div>`;
+
+          const bridgePill =
+            data.network_count > 1
+              ? `<div class="pill orange">bridge container</div>`
+              : "";
+
+          details.innerHTML = `
+          <h2>${escapeHtml(data.label)}</h2>
+          <div class="pill">container</div>
+          ${bridgePill}
+          <div class="kv"><strong>Status:</strong> <span class="${statusClass(data.status)}">${escapeHtml(data.status || "unknown")}</span></div>
+          <div class="kv"><strong>Image:</strong> ${escapeHtml(data.image || "unknown")}</div>
+          <div class="kv"><strong>Networks:</strong> ${data.network_count || 0}</div>
+          ${networks}
+          <div class="kv"><strong>IP(s):</strong> ${escapeHtml(data.ip || "none")}</div>
+          <div class="kv"><strong>ID:</strong> ${escapeHtml(data.id.replace("container:", "").slice(0, 12))}</div>
+          <div class="kv"><strong>Published ports:</strong></div>
+          ${ports}
+          <div class="kv"><strong>Volumes / mounts:</strong></div>
+          ${volumes}
+          `;
+        } else {
+          const unusedPill =
+            data.member_count === 0 ? `<div class="pill">unused</div>` : "";
+          details.innerHTML = `
+          <h2>${escapeHtml(data.label)}</h2>
+          <div class="pill">network</div>
+          ${unusedPill}
+          <div class="kv"><strong>Driver:</strong> ${escapeHtml(data.driver || "unknown")}</div>
+          <div class="kv"><strong>Attached containers:</strong> ${data.member_count || 0}</div>
+          <div class="kv"><strong>ID:</strong> ${escapeHtml(data.id.replace("network:", "").slice(0, 12))}</div>
+        `;
+        }
+      }
+
+      function nodeColor(n) {
+        if (n.type === "network") return "#38bdf8";
+        if ((n.network_count || 0) > 1) return "#f59e0b";
+        if (n.status === "running") return "#22c55e";
+        if (n.status === "exited" || n.status === "dead") return "#ef4444";
+        return "#eab308";
+      }
+
+      function visibleGraph() {
+        const showDirectLinks =
+          document.getElementById("showDirectLinks").checked;
+        const showUnusedNetworks =
+          document.getElementById("showUnusedNetworks").checked;
+
+        const nodes = latestGraph.nodes.filter((n) => {
+          if (
+            !showUnusedNetworks &&
+            n.type === "network" &&
+            n.member_count === 0
+          )
+            return false;
+          return true;
+        });
+
+        const visibleIds = new Set(nodes.map((n) => n.id));
+
+        const edges = latestGraph.edges.filter((e) => {
+          if (!visibleIds.has(e.source) || !visibleIds.has(e.target))
+            return false;
+          if (!showDirectLinks && e.type === "container-link") return false;
+          return true;
+        });
+
+        return { nodes, edges };
+      }
+
+      function makePresetPositions(nodes, edges) {
+        const width = Math.max(900, document.getElementById("cy").clientWidth);
+        const height = Math.max(
+          650,
+          document.getElementById("cy").clientHeight,
+        );
+
+        const networks = nodes
+          .filter((n) => n.type === "network")
+          .sort(
+            (a, b) =>
+              (b.member_count || 0) - (a.member_count || 0) ||
+              a.label.localeCompare(b.label),
+          );
+
+        const containers = nodes.filter((n) => n.type === "container");
+        const positionById = {};
+
+        const connectedNetworkIdsByContainer = {};
+        const containersByNetwork = {};
+        for (const n of networks) containersByNetwork[n.id] = [];
+        for (const c of containers) connectedNetworkIdsByContainer[c.id] = [];
+
+        for (const e of edges) {
+          if (e.type !== "membership") continue;
+          const source = nodes.find((n) => n.id === e.source);
+          const target = nodes.find((n) => n.id === e.target);
+          if (!source || !target) continue;
+
+          const cId = source.type === "container" ? source.id : target.id;
+          const nId = source.type === "network" ? source.id : target.id;
+
+          if (connectedNetworkIdsByContainer[cId])
+            connectedNetworkIdsByContainer[cId].push(nId);
+          if (containersByNetwork[nId]) containersByNetwork[nId].push(cId);
+        }
+
+        const cols = Math.max(1, Math.ceil(Math.sqrt(networks.length || 1)));
+        const xGap = width / (cols + 1);
+        const rows = Math.max(1, Math.ceil((networks.length || 1) / cols));
+        const yGap = height / (rows + 1);
+
+        networks.forEach((network, index) => {
+          const col = index % cols;
+          const row = Math.floor(index / cols);
+          positionById[network.id] = {
+            x: xGap * (col + 1),
+            y: yGap * (row + 1),
+          };
+        });
+
+        const placedContainers = new Set();
+
+        // Single-network containers orbit their network.
+        for (const network of networks) {
+          const members = (containersByNetwork[network.id] || []).filter(
+            (cId) => (connectedNetworkIdsByContainer[cId] || []).length === 1,
+          );
+
+          const center = positionById[network.id];
+          const radius = Math.max(95, 42 * members.length);
+
+          members.forEach((cId, index) => {
+            const angle =
+              (Math.PI * 2 * index) / Math.max(1, members.length) - Math.PI / 2;
+            positionById[cId] = {
+              x: center.x + Math.cos(angle) * radius,
+              y: center.y + Math.sin(angle) * radius,
+            };
+            placedContainers.add(cId);
+          });
+        }
+
+        // Multi-network containers go at the average point between their networks.
+        containers
+          .filter((c) => !placedContainers.has(c.id))
+          .forEach((container, index) => {
+            const netIds = connectedNetworkIdsByContainer[container.id] || [];
+            const points = netIds.map((id) => positionById[id]).filter(Boolean);
+
+            if (points.length) {
+              const x = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+              const y = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+
+              positionById[container.id] = {
+                x: x + ((index % 3) - 1) * 40,
+                y: y - 85 - Math.floor(index / 3) * 40,
+              };
+            } else {
+              positionById[container.id] = {
+                x: 80 + (index % 6) * 120,
+                y: height - 90 - Math.floor(index / 6) * 90,
+              };
+            }
+          });
+
+        return positionById;
+      }
+
+      function buildElements() {
+        const graph = visibleGraph();
+        const grouped = document.getElementById("groupByNetwork").checked;
+        const positions = grouped
+          ? makePresetPositions(graph.nodes, graph.edges)
+          : {};
+
+        const nodes = graph.nodes.map((n) => ({
+          group: "nodes",
+          data: {
+            ...n,
+            color: nodeColor(n),
+            label: n.label,
+          },
+          classes: n.classes || "",
+          position: positions[n.id],
+        }));
+
+        const edges = graph.edges.map((e, idx) => ({
+          group: "edges",
+          data: {
+            id: `edge:${idx}:${e.source}:${e.target}`,
+            source: e.source,
+            target: e.target,
+            label: e.label || "",
+            type: e.type || "membership",
+          },
+          classes:
+            e.type === "container-link" ? "container-link" : "membership",
+        }));
+
+        return [...nodes, ...edges];
+      }
+
+      function renderGraph() {
+        if (!latestGraph) return;
+
+        const elements = buildElements();
+
+        if (cy) {
+          cy.destroy();
+        }
+
+        const grouped = document.getElementById("groupByNetwork").checked;
+
+        cy = cytoscape({
+          container: document.getElementById("cy"),
+          elements,
+          wheelSensitivity: 0.01,
+          minZoom: 0.85,
+          maxZoom: 1.55,
+          style: [
+            {
+              selector: "node",
+              style: {
+                "background-color": "data(color)",
+                label: "data(label)",
+                color: "#e5e7eb",
+                "text-outline-color": "#0f172a",
+                "text-outline-width": 3,
+                "font-size": 12,
+                width: (ele) => (ele.data("type") === "network" ? 46 : 38),
+                height: (ele) => (ele.data("type") === "network" ? 46 : 38),
+                shape: (ele) =>
+                  ele.data("type") === "network"
+                    ? "diamond"
+                    : "round-rectangle",
+                "text-wrap": "wrap",
+                "text-max-width": 130,
+              },
+            },
+            {
+              selector: ".multi-network",
+              style: {
+                "background-color": "#f59e0b",
+                "border-width": 3,
+                "border-color": "#fde68a",
+                width: 48,
+                height: 48,
+              },
+            },
+            {
+              selector: ".unused-network",
+              style: {
+                opacity: 0.32,
+              },
+            },
+            {
+              selector: "edge.membership",
+              style: {
+                width: 2,
+                "line-color": "#64748b",
+                "target-arrow-color": "#64748b",
+                "target-arrow-shape": "triangle",
+                "curve-style": "bezier",
+                label: "data(label)",
+                "font-size": 9,
+                color: "#94a3b8",
+                "text-outline-color": "#0f172a",
+                "text-outline-width": 3,
+              },
+            },
+            {
+              selector: "edge.container-link",
+              style: {
+                width: 1.5,
+                "line-color": "#22c55e",
+                "target-arrow-shape": "none",
+                "curve-style": "bezier",
+                "line-style": "dashed",
+                opacity: 0.55,
+                label: "data(label)",
+                "font-size": 8,
+                color: "#86efac",
+                "text-outline-color": "#0f172a",
+                "text-outline-width": 3,
+              },
+            },
+          ],
+          layout: grouped
+            ? { name: "preset", fit: true, padding: 90 }
+            : {
+                name: "cose",
+                animate: false,
+                fit: true,
+                padding: 100,
+                nodeRepulsion: 9000,
+                idealEdgeLength: 140,
+                edgeElasticity: 80,
+                gravity: 0.25,
+              },
+        });
+
+        cy.on("tap", "node", (event) => {
+          renderDetails(event.target.data());
+        });
+
+        cy.on("tap", (event) => {
+          if (event.target === cy) renderDetails(null);
+        });
+      }
+
+      function fitGraph() {
+        if (!cy) return;
+        cy.animate({
+          fit: { padding: 90 },
+          duration: 250,
+        });
+      }
+
+      async function loadGraph() {
+        const response = await fetch("/api/graph?include_stopped=true");
+        latestGraph = await response.json();
+
+        document.getElementById("containerCount").textContent =
+          latestGraph.summary.containers ?? 0;
+        document.getElementById("networkCount").textContent =
+          latestGraph.summary.networks ?? 0;
+        document.getElementById("portCount").textContent =
+          latestGraph.summary.published_ports ?? 0;
+        document.getElementById("bridgeCount").textContent =
+          latestGraph.summary.multi_network_containers ?? 0;
+
+        if (latestGraph.summary.error) {
+          document.getElementById("details").innerHTML = `
+          <h2>Error</h2>
+          <div class="error">${escapeHtml(latestGraph.summary.error)}</div>
+        `;
+        }
+
+        renderGraph();
+      }
+
+      loadGraph();
+    </script>
+  </body>
+</html>

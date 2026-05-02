@@ -1,0 +1,9 @@
+services:
+  docker-netmap:
+    build: .
+    container_name: docker-netmap
+    ports:
+      - "8765:8765"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
