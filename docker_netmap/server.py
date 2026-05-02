@@ -19,12 +19,12 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
-
+#use json to build graph
 @app.get("/api/graph")
 def graph(include_stopped: bool = True) -> dict:
     return build_docker_graph(include_stopped=include_stopped)
 
-
+#simple health check
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
