@@ -13,6 +13,14 @@ A tiny Python MVP that visualizes local Docker containers, networks, and publish
 - Shows published ports like `localhost:8080 -> container:80`
 - Serves an interactive browser UI
 
+
+<img width="2050" height="1255" alt="dockermap1" src="https://github.com/user-attachments/assets/b1f2777a-0100-4d87-8401-7ae2e100b93a" />
+
+
+
+
+
+
 ## Install
 
 ```bash
