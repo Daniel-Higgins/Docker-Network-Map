@@ -1,6 +1,6 @@
 # Docker Network Map MVP
 
-A tiny Python MVP that visualizes local Docker containers, networks, and published ports on a map. Instead of using Docker Desktop to see what containers are running, you can use this to see how the containers are connected
+A tiny Python MVP that visualizes local Docker containers, networks, and published ports on a map. Instead of using Docker Desktop to see what containers are running, you can use this to see how the containers are connected. This works very well for when you are running many containers at once.
 
 ## What it does
 
