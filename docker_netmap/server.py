@@ -7,6 +7,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from docker_netmap.collector import build_docker_graph
+import docker
+from fastapi import HTTPException
 
 APP_DIR = Path(__file__).parent
 STATIC_DIR = APP_DIR / "static"
@@ -23,6 +25,33 @@ def index() -> FileResponse:
 @app.get("/api/graph")
 def graph(include_stopped: bool = True) -> dict:
     return build_docker_graph(include_stopped=include_stopped)
+
+@app.get("/api/containers/{container_name}/logs")
+def container_logs(container_name: str, tail: int = 100) -> dict:
+    try:
+        client = docker.from_env()
+        container = client.containers.get(container_name)
+
+        logs = (
+            container.logs(
+                tail=tail,
+                stdout=True,
+                stderr=True,
+            )
+            .decode("utf-8", errors="replace")
+            .splitlines()
+        )
+
+        return {
+            "container": container_name,
+            "logs": logs,
+        }
+
+    except docker.errors.NotFound:
+        raise HTTPException(status_code=404, detail="Container not found")
+
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 #simple health check
 @app.get("/health")

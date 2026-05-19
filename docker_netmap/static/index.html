@@ -345,7 +345,13 @@
           ${ports}
           <div class="kv"><strong>Volumes / mounts:</strong></div>
           ${volumes}
-          `;
+	  ${volumes}
+
+	  <h3 style="margin-top: 14px;">Logs</h3>
+	  <pre id="logs-box" style="white-space: pre-wrap; max-height: 300px; overflow: auto; font-size: 11px; background: #020617; padding: 10px; border-radius: 8px;"></pre>
+	  `;
+	  loadContainerLogs(data.label.split("\n")[0]);
+          
         } else {
           const unusedPill =
             data.member_count === 0 ? `<div class="pill">unused</div>` : "";
@@ -359,6 +365,30 @@
         `;
         }
       }
+
+      async function loadContainerLogs(containerName) {
+  const logsBox = document.getElementById("logs-box");
+  if (!logsBox) return;
+
+  logsBox.textContent = "Loading logs...";
+
+  try {
+    const res = await fetch(
+      `/api/containers/${encodeURIComponent(containerName)}/logs?tail=100`
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      logsBox.textContent = data.detail || "Failed to load logs.";
+      return;
+    }
+
+    	logsBox.textContent = (data.logs || []).join("\n") || "No logs found.";
+  	} catch (err) {
+    	logsBox.textContent = `Failed to load logs: ${err}`;
+  	}
+	}
 
       function nodeColor(n) {
         if (n.type === "network") return "#38bdf8";
