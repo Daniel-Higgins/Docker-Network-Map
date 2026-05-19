@@ -27,7 +27,7 @@ def graph(include_stopped: bool = True) -> dict:
     return build_docker_graph(include_stopped=include_stopped)
 
 @app.get("/api/containers/{container_name}/logs")
-def container_logs(container_name: str, tail: int = 100) -> dict:
+def container_logs(container_name: str, tail: int = 50) -> dict:
     try:
         client = docker.from_env()
         container = client.containers.get(container_name)
